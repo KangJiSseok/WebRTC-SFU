@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mediasoup Broadcaster</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    label { display: block; margin-bottom: 0.5rem; }
+    input { margin-left: 0.5rem; }
+    button { margin-right: 0.5rem; }
+    #status { margin-top: 1rem; min-height: 1.5rem; }
+    video { width: 480px; height: 270px; background: #000; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Mediasoup Broadcaster</h1>
+  <label>Room ID <input id="roomId" placeholder="room-123" /></label>
+  <label>Broadcaster ID <input id="userId" placeholder="host-1" /></label>
+  <button id="connectBtn">Create Room</button>
+  <button id="startBtn" disabled>Start Broadcast</button>
+  <button id="stopBtn" disabled>Stop</button>
+  <div id="status"></div>
+  <video id="localVideo" autoplay playsinline muted></video>
+  <script type="module">
+    import * as mediasoup from 'https://esm.sh/mediasoup-client@3.16.7';
+    window.mediasoupClient = mediasoup; // 기존 코드 호환용 전역
+    console.log('mediasoup loaded:', !!window.mediasoupClient);
+  </script>
+  <script src="./broadcaster.js"></script>
+</body>
+</html>

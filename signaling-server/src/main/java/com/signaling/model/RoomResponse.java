@@ -1,0 +1,64 @@
+package com.signaling.model;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class RoomResponse {
+
+    private String id;
+    private String name;
+    private String hostId;
+    private String routerId;
+    private Instant createdAt;
+    private List<String> participants = new ArrayList<>();
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getHostId() {
+        return hostId;
+    }
+
+    public void setHostId(String hostId) {
+        this.hostId = hostId;
+    }
+
+    public String getRouterId() {
+        return routerId;
+    }
+
+    public void setRouterId(String routerId) {
+        this.routerId = routerId;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public List<String> getParticipants() {
+        return Collections.unmodifiableList(participants);
+    }
+
+    public void setParticipants(List<String> participants) {
+        this.participants = participants == null ? new ArrayList<>() : new ArrayList<>(participants);
+    }
+}

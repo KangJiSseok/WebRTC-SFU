@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mediasoup Viewer</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    label { display: block; margin-bottom: 0.5rem; }
+    input { margin-left: 0.5rem; }
+    button { margin-right: 0.5rem; }
+    #status { margin-top: 1rem; min-height: 1.5rem; }
+    video { width: 480px; height: 270px; background: #000; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Mediasoup Viewer</h1>
+  <label>Room ID <input id="roomId" placeholder="room-123" /></label>
+  <label>Viewer ID <input id="userId" placeholder="viewer-1" /></label>
+  <button id="joinBtn">Join Room</button>
+  <button id="leaveBtn" disabled>Leave Room</button>
+  <div id="status"></div>
+  <video id="remoteVideo" playsinline autoplay controls style="width: 480px; height: 270px; background: #000;"></video>
+  <div id="remoteContainer"></div>
+  <script type="module">
+    // 검증된 ESM CDN 사용
+    import * as mediasoup from 'https://esm.sh/mediasoup-client@3.16.7';
+    window.mediasoupClient = mediasoup; // 기존 코드 호환용 전역
+    console.log('mediasoup loaded:', !!window.mediasoupClient);
+  </script>
+  <script src="./viewer.js" defer></script>
+</body>
+</html>

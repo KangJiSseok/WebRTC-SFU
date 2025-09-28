@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: signaling-server
+server:
+  port: 8080
+mediasoup:
+  sfu-server-url: "http://127.0.0.1:3001"
+  worker-settings:
+    rtc-min-port: 10000
+    rtc-max-port: 10100
+logging:
+  level:
+    com.signaling: DEBUG
