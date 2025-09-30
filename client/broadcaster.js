@@ -1,4 +1,6 @@
+// 브로드캐스터 페이지에서 mediasoup를 통해 방송을 수행하는 핵심 로직을 캡슐화한 즉시 실행 함수
 (() => {
+  // 브라우저에서 유지해야 하는 방송 상태와 mediasoup 관련 정보를 모아둔 객체
   const state = {
     ws: null,
     roomId: '',
@@ -10,6 +12,7 @@
     listeners: []
   };
 
+  // 주요 DOM 요소 캐시. 신호/버튼/미리보기 비디오를 빠르게 접근하기 위해 보관한다.
   const statusEl = document.getElementById('status');
   const roomInput = document.getElementById('roomId');
   const userInput = document.getElementById('userId');
@@ -20,6 +23,7 @@
 
   const WS_URL = 'ws://localhost:8080/ws';
 
+  // 사용자에게 상태 메시지를 한국어로 전달하고 콘솔에도 기록한다.
   function setStatus(message, isError = false) {
     if (statusEl) {
       statusEl.textContent = message;
@@ -28,10 +32,12 @@
     console.log('[broadcaster]', message);
   }
 
+  // 서버가 보낸 특정 응답을 대기열에 추가한다.
   function addListener(entry) {
     state.listeners.push(entry);
   }
 
+  // 한 번 사용한 리스너는 배열에서 바로 제거하여 메모리 누수를 방지한다.
   function removeListener(entry) {
     const index = state.listeners.indexOf(entry);
     if (index >= 0) {
@@ -39,6 +45,7 @@
     }
   }
 
+  // 수신된 메시지를 검사하여 기다리고 있던 Promise를 깨운다.
   function dispatchListeners(message) {
     const listeners = [...state.listeners];
     for (const entry of listeners) {
@@ -54,6 +61,7 @@
     }
   }
 
+  // 특정 타입의 WebSocket 응답을 기다리는 Promise 헬퍼. mediasoup 절차가 순차적으로 진행되도록 보장한다.
   function waitForMessage(type, predicate = () => true, timeout = 5000) {
     return new Promise((resolve, reject) => {
       const entry = {
@@ -70,6 +78,7 @@
     });
   }
 
+  // 신호 서버와의 WebSocket 연결을 생성하거나 재사용한다.
   function ensureWebSocket() {
     if (state.ws && state.ws.readyState === WebSocket.OPEN) {
       return Promise.resolve(state.ws);
@@ -100,6 +109,7 @@
     });
   }
 
+  // 공통 포맷으로 WebSocket 메시지를 전송한다.
   function send(action, payload) {
     if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
       throw new Error('WebSocket is not connected');
@@ -108,6 +118,7 @@
     state.ws.send(JSON.stringify(message));
   }
 
+  // 서버로부터 수신한 메시지를 타입별로 분기 처리한다.
   async function handleMessage(message) {
     switch (message.type) {
       case 'roomCreated':
@@ -124,6 +135,7 @@
     }
   }
 
+  // 방 생성 응답을 수신했을 때 디바이스/트랜스포트를 준비한다.
   async function handleRoomReady(message) {
     await ensureDevice(message.router);
     await ensureSendTransport();
@@ -133,6 +145,7 @@
     setStatus(`Room ${state.roomId} ready. Press Start Broadcast to begin.`);
   }
 
+  // mediasoup Device를 초기화하여 라우터의 RTP 능력을 로드한다.
   async function ensureDevice(router) {
     if (!router) {
       throw new Error('Router information missing');
@@ -149,6 +162,7 @@
     return device;
   }
 
+  // 브로드캐스터가 사용할 송신 트랜스포트를 생성 및 연결한다.
   async function ensureSendTransport() {
     if (state.sendTransport) {
       return state.sendTransport;
@@ -207,6 +221,7 @@
     return sendTransport;
   }
 
+  // 카메라/마이크 스트림을 가져와 각 트랙을 mediasoup producer로 전송한다.
   async function startBroadcast() {
     try {
       await ensureSendTransport();
@@ -225,6 +240,7 @@
     }
   }
 
+  // 개별 미디어 트랙을 송신 트랜스포트에 연결하고 producer를 생성한다.
   async function produceTrack(track) {
     const transport = await ensureSendTransport();
     const producer = await transport.produce({ track, appData: { userId: state.userId, kind: track.kind } });
@@ -236,6 +252,7 @@
     });
   }
 
+  // 방송을 중단하면서 producer와 로컬 트랙을 정리한다.
   function stopBroadcast() {
     for (const producer of state.producers.values()) {
       try {
@@ -257,6 +274,7 @@
     setStatus('Broadcast stopped');
   }
 
+  // 페이지 이탈 또는 수동 종료 시 방을 떠났다고 서버에 알린다.
   function leaveRoom() {
     if (state.ws && state.ws.readyState === WebSocket.OPEN && state.roomId && state.userId) {
       try {
@@ -268,6 +286,7 @@
     stopBroadcast();
   }
 
+  // 사용자가 입력한 ID 기반으로 WebSocket을 연결하고 방 생성을 요청한다.
   async function connectAndCreateRoom() {
     try {
       state.roomId = roomInput.value.trim();
@@ -285,6 +304,7 @@
     }
   }
 
+  // 버튼/윈도 이벤트를 바인딩하여 사용자 액션을 처리한다.
   connectBtn.addEventListener('click', connectAndCreateRoom);
   startBtn.addEventListener('click', startBroadcast);
   stopBtn.addEventListener('click', stopBroadcast);

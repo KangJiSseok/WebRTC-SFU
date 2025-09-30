@@ -13,12 +13,15 @@
   </style>
 </head>
 <body>
+  <!-- 이 페이지는 시청자가 SFU를 통해 방송을 수신/재생하기 위한 화면이다. -->
+  <!-- 뷰어가 방에 접속하여 방송을 시청하기 위한 입력/상태 영역 -->
   <h1>Mediasoup Viewer</h1>
   <label>Room ID <input id="roomId" placeholder="room-123" /></label>
   <label>Viewer ID <input id="userId" placeholder="viewer-1" /></label>
   <button id="joinBtn">Join Room</button>
   <button id="leaveBtn" disabled>Leave Room</button>
   <div id="status"></div>
+  <!-- 브로드캐스터의 오디오/비디오가 합쳐져 재생되는 단일 비디오 요소 -->
   <video id="remoteVideo" playsinline autoplay controls style="width: 480px; height: 270px; background: #000;"></video>
   <div id="remoteContainer"></div>
   <script type="module">

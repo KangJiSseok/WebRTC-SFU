@@ -5,6 +5,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * 방 조회 API 응답에 사용되는 DTO.
+ */
 public class RoomResponse {
 
     private String id;

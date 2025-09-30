@@ -3,6 +3,9 @@ package com.signaling.model;
 import java.time.Instant;
 import java.util.Objects;
 
+/**
+ * 방송 방 메타 정보를 캡슐화한다.
+ */
 public class Room {
 
     private final String id;

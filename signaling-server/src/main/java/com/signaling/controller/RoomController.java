@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 방 생성/조회/삭제 REST API를 제공한다.
+ */
 @RestController
 @RequestMapping("/api/rooms")
 public class RoomController {
@@ -29,6 +32,9 @@ public class RoomController {
         this.mediaSoupService = mediaSoupService;
     }
 
+    /**
+     * 새로운 방송 방을 생성하고 SFU에 Router 생성도 위임한다.
+     */
     @PostMapping
     public ResponseEntity<RoomResponse> createRoom(@Valid @RequestBody CreateRoomRequest request) {
         Room room = roomService.createRoom(request.getRoomId(), request.getHostId(), request.getName());
@@ -38,6 +44,9 @@ public class RoomController {
         return ResponseEntity.created(URI.create("/api/rooms/" + room.getId())).body(response);
     }
 
+    /**
+     * 방 정보를 조회한다.
+     */
     @GetMapping("/{roomId}")
     public ResponseEntity<RoomResponse> getRoom(@PathVariable String roomId) {
         Optional<Room> roomOptional = roomService.getRoom(roomId);
@@ -45,6 +54,9 @@ public class RoomController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    /**
+     * 방을 제거하고 SFU 리소스도 정리한다.
+     */
     @DeleteMapping("/{roomId}")
     public ResponseEntity<Void> deleteRoom(@PathVariable String roomId) {
         if (!roomService.roomExists(roomId)) {
@@ -55,6 +67,9 @@ public class RoomController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * 내부 Room 도메인을 외부 응답 DTO로 변환한다.
+     */
     private RoomResponse toResponse(Room room) {
         RoomResponse response = new RoomResponse();
         response.setId(room.getId());

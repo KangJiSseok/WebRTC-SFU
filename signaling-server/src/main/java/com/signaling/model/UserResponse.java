@@ -2,6 +2,9 @@ package com.signaling.model;
 
 import java.time.Instant;
 
+/**
+ * 사용자 정보를 노출하기 위한 응답 DTO.
+ */
 public class UserResponse {
 
     private String id;

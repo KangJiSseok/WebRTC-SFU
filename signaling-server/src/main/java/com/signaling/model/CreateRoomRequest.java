@@ -2,6 +2,9 @@ package com.signaling.model;
 
 import jakarta.validation.constraints.NotBlank;
 
+/**
+ * 방 생성 REST 요청 바디를 표현한다.
+ */
 public class CreateRoomRequest {
 
     @NotBlank
