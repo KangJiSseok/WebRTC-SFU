@@ -3,6 +3,9 @@ package com.signaling.model;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+/**
+ * 사용자가 방에 참가할 때 전달하는 요청 정보를 담는다.
+ */
 public class JoinRoomRequest {
 
     @NotBlank

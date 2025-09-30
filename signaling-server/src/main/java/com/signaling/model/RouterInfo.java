@@ -5,6 +5,9 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * mediasoup Router의 식별자와 RTP 정보, 생성 시각을 저장한다.
+ */
 public class RouterInfo {
 
     private String roomId;

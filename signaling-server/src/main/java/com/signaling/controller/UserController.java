@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 사용자(브로드캐스터/뷰어) 입장/조회/퇴장을 관리하는 REST 컨트롤러.
+ */
 @RestController
 @RequestMapping("/api/rooms/{roomId}/users")
 public class UserController {
@@ -32,6 +35,9 @@ public class UserController {
         this.roomService = roomService;
     }
 
+    /**
+     * 사용자가 방에 참가할 때 호출된다.
+     */
     @PostMapping
     public ResponseEntity<UserResponse> joinRoom(@PathVariable String roomId, @Valid @RequestBody JoinRoomRequest request) {
         if (!roomService.roomExists(roomId)) {
@@ -44,6 +50,9 @@ public class UserController {
         return ResponseEntity.created(URI.create("/api/rooms/" + roomId + "/users/" + user.getId())).body(response);
     }
 
+    /**
+     * 방에 속한 모든 사용자 목록을 반환한다.
+     */
     @GetMapping
     public ResponseEntity<List<UserResponse>> listUsers(@PathVariable String roomId) {
         if (!roomService.roomExists(roomId)) {
@@ -55,6 +64,9 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
+    /**
+     * 사용자가 방에서 떠날 때 호출된다.
+     */
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> leaveRoom(@PathVariable String roomId, @PathVariable String userId) {
         if (!roomService.roomExists(roomId)) {
@@ -69,6 +81,9 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * User 도메인을 API 응답으로 변환한다.
+     */
     private UserResponse toResponse(User user) {
         UserResponse response = new UserResponse();
         response.setId(user.getId());
