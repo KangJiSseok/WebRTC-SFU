@@ -10,6 +10,7 @@ import com.signaling.model.User;
 import com.signaling.model.UserRole;
 import com.signaling.service.MediaSoupException;
 import com.signaling.service.MediaSoupService;
+import com.signaling.service.ProducerService;
 import com.signaling.service.RoomService;
 import com.signaling.service.UserService;
 import java.io.IOException;
@@ -40,19 +41,19 @@ public class SignalingWebSocketHandler extends TextWebSocketHandler {
     private final RoomService roomService;
     private final UserService userService;
     private final MediaSoupService mediaSoupService;
+    private final ProducerService producerService;
 
     // 인메모리 데이터 관리용 컬렉션들 (스레드 안전성을 위해 ConcurrentHashMap 사용)
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>(); // 세션 ID -> WebSocket 세션
     private final Map<String, SessionContext> contexts = new ConcurrentHashMap<>(); // 세션 ID -> 세션 컨텍스트
     private final Map<String, Set<String>> roomSessions = new ConcurrentHashMap<>(); // 방 ID -> 세션 ID 목록
-    private final Map<String, Set<String>> roomProducers = new ConcurrentHashMap<>(); // 방 ID -> Producer ID 목록
-
     public SignalingWebSocketHandler(ObjectMapper objectMapper, RoomService roomService,
-            UserService userService, MediaSoupService mediaSoupService) {
+            UserService userService, MediaSoupService mediaSoupService, ProducerService producerService) {
         this.objectMapper = objectMapper;
         this.roomService = roomService;
         this.userService = userService;
         this.mediaSoupService = mediaSoupService;
+        this.producerService = producerService;
     }
 
     @Override
@@ -122,14 +123,12 @@ public class SignalingWebSocketHandler extends TextWebSocketHandler {
         UserRole role = UserRole.BROADCASTER;
         User host = new User(hostId, roomId, role, Instant.now());
         userService.addUser(host);
-        roomService.addUserToRoom(roomId, hostId);
 
         // 세션 컨텍스트 업데이트
         context.roomId = roomId;
         context.userId = hostId;
         context.role = role;
         registerSession(roomId, session.getId());
-        roomProducers.computeIfAbsent(roomId, key -> ConcurrentHashMap.newKeySet());
 
         // 3. 클라이언트에게 방 생성 완료 응답 전송
         ObjectNode response = objectMapper.createObjectNode();
@@ -161,7 +160,6 @@ public class SignalingWebSocketHandler extends TextWebSocketHandler {
         // 2. 뷰어를 방에 등록
         User user = new User(userId, roomId, role, Instant.now());
         userService.addUser(user);
-        roomService.addUserToRoom(roomId, userId);
 
         // 세션 컨텍스트 업데이트
         context.roomId = roomId;
@@ -272,7 +270,8 @@ public class SignalingWebSocketHandler extends TextWebSocketHandler {
             if (context != null) {
                 context.producerIds.add(producerId); // 세션 컨텍스트에 Producer ID 추가
             }
-            roomProducers.computeIfAbsent(roomId, key -> ConcurrentHashMap.newKeySet()).add(producerId); // 방의 Producer 목록에 추가
+            String kind = optionalText(payload, "kind");
+            producerService.addProducer(roomId, producerId, context != null ? context.userId : null, kind);
             // 같은 방의 다른 뷰어들에게 새 Producer 알림 전송
             ObjectNode notification = objectMapper.createObjectNode();
             notification.put("type", "newProducer");
@@ -324,7 +323,6 @@ public class SignalingWebSocketHandler extends TextWebSocketHandler {
 
         // 1. 사용자 정보 정리
         userService.removeUser(userId);
-        roomService.removeUserFromRoom(roomId, userId);
 
         // 방 세션 목록에서 제거
         roomSessions.computeIfPresent(roomId, (key, set) -> {
@@ -339,14 +337,14 @@ public class SignalingWebSocketHandler extends TextWebSocketHandler {
         }
 
         // 3. 방이 비어있으면 방 자체를 삭제
-        if (roomService.getUsersInRoom(roomId).isEmpty()) {
+        if (userService.countUsersByRoom(roomId) == 0) {
             try {
                 mediaSoupService.closeRoom(roomId); // mediasoup SFU 서버에서 방 삭제
             } catch (MediaSoupException ex) {
                 log.debug("Ignored mediasoup close error for room {}: {}", roomId, ex.getMessage());
             }
+            producerService.removeProducersByRoom(roomId);
             roomService.deleteRoom(roomId);
-            roomProducers.remove(roomId);
             roomSessions.remove(roomId);
             log.info("Room {} closed due to no participants", roomId);
         }
@@ -371,10 +369,9 @@ public class SignalingWebSocketHandler extends TextWebSocketHandler {
     private ArrayNode toProducersNode(String roomId) {
         // 방에 존재하는 Producer 목록을 JSON 배열로 만든다.
         ArrayNode arrayNode = objectMapper.createArrayNode();
-        Set<String> producers = roomProducers.get(roomId);
-        if (producers != null) {
-            producers.stream().filter(Objects::nonNull).forEach(arrayNode::add);
-        }
+        producerService.getProducerIdsByRoom(roomId).stream()
+                .filter(Objects::nonNull)
+                .forEach(arrayNode::add);
         return arrayNode;
     }
 
@@ -397,10 +394,9 @@ public class SignalingWebSocketHandler extends TextWebSocketHandler {
 
     private void removeProducer(String roomId, String producerId, String excludeSessionId) {
         // Producer가 사라졌을 때 목록에서 제거하고 뷰어에게 알린다.
-        roomProducers.computeIfPresent(roomId, (key, set) -> {
-            set.remove(producerId);
-            return set.isEmpty() ? null : set;
-        });
+        if (producerId != null) {
+            producerService.removeProducer(producerId);
+        }
         if (producerId != null) {
             ObjectNode notification = objectMapper.createObjectNode();
             notification.put("type", "producerClosed");

@@ -45,7 +45,6 @@ public class UserController {
         }
         User user = new User(request.getUserId(), roomId, request.getRole(), Instant.now());
         userService.addUser(user);
-        roomService.addUserToRoom(roomId, user.getId());
         UserResponse response = toResponse(user);
         return ResponseEntity.created(URI.create("/api/rooms/" + roomId + "/users/" + user.getId())).body(response);
     }
@@ -77,7 +76,6 @@ public class UserController {
             return ResponseEntity.notFound().build();
         }
         userService.removeUser(userId);
-        roomService.removeUserFromRoom(roomId, userId);
         return ResponseEntity.noContent().build();
     }
 

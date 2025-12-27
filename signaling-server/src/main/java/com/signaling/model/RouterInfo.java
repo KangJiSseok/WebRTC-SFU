@@ -1,5 +1,12 @@
 package com.signaling.model;
 
+import com.signaling.persistence.MapToJsonConverter;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
+import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
@@ -8,11 +15,23 @@ import java.util.Objects;
 /**
  * mediasoup Router의 식별자와 RTP 정보, 생성 시각을 저장한다.
  */
+@Entity
+@Table(name = "router_info")
 public class RouterInfo {
 
+    @Id
+    @Column(name = "room_id", nullable = false, length = 100)
     private String roomId;
+
+    @Column(name = "router_id", nullable = false, length = 200)
     private String routerId;
+
+    @Lob
+    @Convert(converter = MapToJsonConverter.class)
+    @Column(name = "rtp_capabilities", columnDefinition = "json")
     private Map<String, Object> rtpCapabilities = Collections.emptyMap();
+
+    @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
     public RouterInfo() {
