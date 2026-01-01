@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as mediasoupClient from 'mediasoup-client'
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws'
+const RAW_WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001'
+const WS_TOKEN = import.meta.env.VITE_WS_TOKEN
+const WS_URL = WS_TOKEN ? appendToken(RAW_WS_URL, WS_TOKEN) : RAW_WS_URL
+
+function appendToken(url, token) {
+  const separator = url.includes('?') ? '&' : '?'
+  return `${url}${separator}token=${encodeURIComponent(token)}`
+}
 
 function createInitialState() {
   return {

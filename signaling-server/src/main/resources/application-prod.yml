@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/sfu?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:sfu_user}
+    password: ${DB_PASSWORD:1234}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    clean-disabled: true
+
+logging:
+  level:
+    com.signaling: INFO
+    org.hibernate.SQL: WARN
+
+internal-api:
+  token: ${INTERNAL_API_TOKEN:}
+  allowed-ips: ${INTERNAL_ALLOWED_IPS:}
+
+jwt:
+  issuer: ${JWT_ISSUER:}
+  audience: ${JWT_AUDIENCE:}
+  private-key: ${JWT_PRIVATE_KEY:}
+  private-key-path: ${JWT_PRIVATE_KEY_PATH:}
+  ttl-seconds: ${JWT_TTL_SECONDS:3600}

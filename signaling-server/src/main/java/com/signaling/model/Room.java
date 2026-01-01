@@ -27,9 +27,6 @@ public class Room {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    @Column(name = "router_id", length = 200)
-    private volatile String routerId;
-
     protected Room() {
     }
 
@@ -56,11 +53,4 @@ public class Room {
         return createdAt;
     }
 
-    public String getRouterId() {
-        return routerId;
-    }
-
-    public void setRouterId(String routerId) {
-        this.routerId = routerId;
-    }
 }

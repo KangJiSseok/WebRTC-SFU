@@ -1,10 +1,8 @@
 package com.signaling.service;
 
 import com.signaling.model.Room;
-import com.signaling.model.RouterInfo;
 import com.signaling.repository.ProducerRepository;
 import com.signaling.repository.RoomRepository;
-import com.signaling.repository.RouterInfoRepository;
 import com.signaling.repository.UserRepository;
 import java.time.Instant;
 import java.util.List;
@@ -19,14 +17,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class RoomService {
 
     private final RoomRepository roomRepository;
-    private final RouterInfoRepository routerInfoRepository;
     private final UserRepository userRepository;
     private final ProducerRepository producerRepository;
 
-    public RoomService(RoomRepository roomRepository, RouterInfoRepository routerInfoRepository,
-            UserRepository userRepository, ProducerRepository producerRepository) {
+    public RoomService(RoomRepository roomRepository, UserRepository userRepository,
+            ProducerRepository producerRepository) {
         this.roomRepository = roomRepository;
-        this.routerInfoRepository = routerInfoRepository;
         this.userRepository = userRepository;
         this.producerRepository = producerRepository;
     }
@@ -62,7 +58,6 @@ public class RoomService {
      */
     @Transactional
     public void deleteRoom(String roomId) {
-        routerInfoRepository.deleteById(roomId);
         producerRepository.deleteByRoomId(roomId);
         userRepository.deleteByRoomId(roomId);
         roomRepository.deleteById(roomId);
@@ -83,29 +78,6 @@ public class RoomService {
     /**
      * SFU에서 생성한 Router 정보를 캐시에 저장한다.
      */
-    @Transactional
-    public void saveRouterInfo(String roomId, RouterInfo routerInfo) {
-        routerInfoRepository.save(routerInfo);
-        roomRepository.findById(roomId).ifPresent(room -> {
-            room.setRouterId(routerInfo.getRouterId());
-            roomRepository.save(room);
-        });
-    }
-
-    /**
-     * 미리 저장해둔 Router 정보를 조회한다.
-     */
-    public Optional<RouterInfo> getRouterInfo(String roomId) {
-        return routerInfoRepository.findById(roomId);
-    }
-
-    /**
-     * Router 정보만 별도로 삭제한다.
-     */
-    public void removeRouterInfo(String roomId) {
-        routerInfoRepository.deleteById(roomId);
-    }
-
     /**
      * 해당 방이 존재하는지 여부를 반환한다.
      */

@@ -14,6 +14,7 @@ coverage/
 # Environment
 .env
 .env.*
+keys/
 
 # Editor/OS
 .vscode/

@@ -13,7 +13,6 @@ public class RoomResponse {
     private String id;
     private String name;
     private String hostId;
-    private String routerId;
     private Instant createdAt;
     private List<String> participants = new ArrayList<>();
 
@@ -39,14 +38,6 @@ public class RoomResponse {
 
     public void setHostId(String hostId) {
         this.hostId = hostId;
-    }
-
-    public String getRouterId() {
-        return routerId;
-    }
-
-    public void setRouterId(String routerId) {
-        this.routerId = routerId;
     }
 
     public Instant getCreatedAt() {

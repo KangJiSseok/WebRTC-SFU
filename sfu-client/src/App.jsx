@@ -29,7 +29,7 @@ function App() {
       </main>
       <footer className="app__footer">
         <p>
-          Signaling server 기본값: <code>ws://localhost:8080/ws</code> (환경변수{' '}
+          Signaling server 기본값: <code>ws://localhost:3001</code> (환경변수{' '}
           <code>VITE_WS_URL</code>로 변경 가능)
         </p>
       </footer>

@@ -3,7 +3,6 @@ package com.signaling.controller;
 import com.signaling.model.CreateRoomRequest;
 import com.signaling.model.Room;
 import com.signaling.model.RoomResponse;
-import com.signaling.service.MediaSoupService;
 import com.signaling.service.RoomService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -25,11 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class RoomController {
 
     private final RoomService roomService;
-    private final MediaSoupService mediaSoupService;
-
-    public RoomController(RoomService roomService, MediaSoupService mediaSoupService) {
+    public RoomController(RoomService roomService) {
         this.roomService = roomService;
-        this.mediaSoupService = mediaSoupService;
     }
 
     /**
@@ -38,8 +34,6 @@ public class RoomController {
     @PostMapping
     public ResponseEntity<RoomResponse> createRoom(@Valid @RequestBody CreateRoomRequest request) {
         Room room = roomService.createRoom(request.getRoomId(), request.getHostId(), request.getName());
-        var routerInfo = mediaSoupService.createRouter(room.getId());
-        roomService.saveRouterInfo(room.getId(), routerInfo);
         RoomResponse response = toResponse(room);
         return ResponseEntity.created(URI.create("/api/rooms/" + room.getId())).body(response);
     }
@@ -62,7 +56,6 @@ public class RoomController {
         if (!roomService.roomExists(roomId)) {
             return ResponseEntity.notFound().build();
         }
-        mediaSoupService.closeRoom(roomId);
         roomService.deleteRoom(roomId);
         return ResponseEntity.noContent().build();
     }
@@ -75,7 +68,6 @@ public class RoomController {
         response.setId(room.getId());
         response.setName(room.getName());
         response.setHostId(room.getHostId());
-        response.setRouterId(room.getRouterId());
         response.setCreatedAt(room.getCreatedAt());
         response.setParticipants(roomService.getUsersInRoom(room.getId()));
         return response;

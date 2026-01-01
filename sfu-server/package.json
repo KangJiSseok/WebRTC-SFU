@@ -3,15 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "description": "mediasoup SFU server for WebRTC broadcasting",
-  "main": "server.js",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node src/index.js"
   },
   "dependencies": {
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
     "mediasoup": "^3.19.3",
-    "socket.io": "^4.7.5"
+    "socket.io": "^4.7.5",
+    "ws": "^8.18.0",
+    "dotenv": "^16.4.5"
   }
 }
