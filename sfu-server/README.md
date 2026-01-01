@@ -48,3 +48,8 @@ curl -X POST http://localhost:8080/api/auth/token \
   -H 'Content-Type: application/json' \
   -d '{"subject":"user-1","role":"BROADCASTER"}'
 ```
+
+## SFU token access guard (Spring)
+
+To protect the `/api/rooms/{roomId}/sfu-token` endpoint, set `SFU_TOKEN_HASH`
+with a BCrypt hash and pass the raw token via `X-Access-Token`.

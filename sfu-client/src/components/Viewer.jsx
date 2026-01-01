@@ -2,12 +2,54 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import * as mediasoupClient from 'mediasoup-client'
 
 const RAW_WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001'
-const WS_TOKEN = import.meta.env.VITE_WS_TOKEN
-const WS_URL = WS_TOKEN ? appendToken(RAW_WS_URL, WS_TOKEN) : RAW_WS_URL
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+
+function getMemberId() {
+  const raw = localStorage.getItem('sfu_member')
+  if (!raw) return ''
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed.id ? String(parsed.id) : ''
+  } catch (err) {
+    return ''
+  }
+}
+
+async function loadRooms() {
+  const response = await fetch(`${API_BASE}/api/rooms`, {
+    method: 'GET',
+    credentials: 'include'
+  })
+  if (!response.ok) {
+    throw new Error('Failed to load rooms')
+  }
+  const data = await response.json()
+  return data.map((room) => room.roomId)
+}
 
 function appendToken(url, token) {
+  if (!token) return url
   const separator = url.includes('?') ? '&' : '?'
   return `${url}${separator}token=${encodeURIComponent(token)}`
+}
+
+function buildWsUrl(token) {
+  return appendToken(RAW_WS_URL, token)
+}
+
+async function fetchSfuToken(roomId, role) {
+  const response = await fetch(
+    `${API_BASE}/api/rooms/${roomId}/sfu-token?role=${encodeURIComponent(role)}`,
+    {
+      method: 'POST',
+      credentials: 'include'
+    }
+  )
+  if (!response.ok) {
+    throw new Error('Failed to issue SFU token. Please login.')
+  }
+  const data = await response.json()
+  return data.token
 }
 
 function createInitialState() {
@@ -15,6 +57,7 @@ function createInitialState() {
     ws: null,
     roomId: '',
     userId: '',
+    sfuToken: '',
     device: null,
     recvTransport: null,
     consumers: new Map(),
@@ -24,7 +67,7 @@ function createInitialState() {
 
 function Viewer() {
   const [roomId, setRoomId] = useState('')
-  const [userId, setUserId] = useState('')
+  const [rooms, setRooms] = useState([])
   const [status, setStatus] = useState('')
   const [isError, setIsError] = useState(false)
   const [canJoin, setCanJoin] = useState(true)
@@ -308,7 +351,7 @@ function Viewer() {
       return Promise.resolve(stateRef.current.ws)
     }
     return new Promise((resolve, reject) => {
-      const ws = new WebSocket(WS_URL)
+      const ws = new WebSocket(buildWsUrl(stateRef.current.sfuToken))
       stateRef.current.ws = ws
       ws.addEventListener('open', () => {
         updateStatus('Connected to signaling server')
@@ -333,24 +376,26 @@ function Viewer() {
     })
   }, [dispatchListeners, handleMessage, updateStatus])
 
-  const joinRoom = useCallback(async () => {
+  const joinRoom = useCallback(async (roomIdOverride) => {
     try {
-      const trimmedRoom = roomId.trim()
-      const trimmedUser = userId.trim()
-      if (!trimmedRoom || !trimmedUser) {
-        updateStatus('Room ID and Viewer ID are required', true)
+      const targetRoom = roomIdOverride ?? roomId
+      const trimmedRoom = targetRoom.trim()
+      const memberId = getMemberId()
+      if (!trimmedRoom || !memberId) {
+        updateStatus('Room ID and login session are required', true)
         return
       }
       stateRef.current.roomId = trimmedRoom
-      stateRef.current.userId = trimmedUser
+      stateRef.current.userId = memberId
+      stateRef.current.sfuToken = await fetchSfuToken(trimmedRoom, 'VIEWER')
       await ensureWebSocket()
-      send('joinRoom', { roomId: trimmedRoom, userId: trimmedUser, role: 'VIEWER' })
+      send('joinRoom', { roomId: trimmedRoom, userId: memberId, role: 'VIEWER' })
       updateStatus('Joining room...')
     } catch (err) {
       console.error(err)
       updateStatus(`Failed to join room: ${err.message}`, true)
     }
-  }, [ensureWebSocket, roomId, send, updateStatus, userId])
+  }, [ensureWebSocket, roomId, send, updateStatus])
 
   const leaveRoom = useCallback(() => {
     for (const producerId of [...stateRef.current.consumers.keys()]) {
@@ -391,6 +436,15 @@ function Viewer() {
 
   useEffect(() => {
     mountedRef.current = true
+    loadRooms()
+      .then((list) => {
+        if (mountedRef.current) {
+          setRooms(list)
+        }
+      })
+      .catch((err) => {
+        updateStatus(err.message, true)
+      })
     const handleBeforeUnload = () => leaveRoom()
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => {
@@ -398,7 +452,7 @@ function Viewer() {
       window.removeEventListener('beforeunload', handleBeforeUnload)
       leaveRoom()
     }
-  }, [leaveRoom])
+  }, [leaveRoom, updateStatus])
 
   return (
     <section className="panel">
@@ -418,13 +472,8 @@ function Viewer() {
             />
           </label>
           <label>
-            Viewer ID
-            <input
-              value={userId}
-              onChange={(event) => setUserId(event.target.value)}
-              placeholder="viewer-1"
-              autoComplete="off"
-            />
+            Viewer ID (session)
+            <input value={getMemberId() || ''} readOnly />
           </label>
         </div>
         <div className="button-row">
@@ -437,6 +486,42 @@ function Viewer() {
         </div>
         <div className={`status ${isError ? 'status--error' : ''}`}>
           {status || 'Ready.'}
+        </div>
+        <div className="room-list">
+          <div className="room-list__header">
+            <strong>Broadcast Rooms</strong>
+            <button
+              type="button"
+              className="room-list__refresh"
+              onClick={async () => {
+                try {
+                  const list = await loadRooms()
+                  setRooms(list)
+                } catch (err) {
+                  updateStatus(err.message, true)
+                }
+              }}
+            >
+              Refresh
+            </button>
+          </div>
+          {rooms.length === 0 ? (
+            <p className="room-list__empty">No rooms yet.</p>
+          ) : (
+            rooms.map((room) => (
+              <button
+                key={room}
+                type="button"
+                className="room-list__item"
+                onClick={() => {
+                  setRoomId(room)
+                  joinRoom(room)
+                }}
+              >
+                {room}
+              </button>
+            ))
+          )}
         </div>
         <div className="video-wrap">
           <video ref={remoteVideoRef} autoPlay playsInline controls />

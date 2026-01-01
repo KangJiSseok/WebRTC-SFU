@@ -8,7 +8,13 @@ SET @col_exists = (
     AND TABLE_NAME = 'rooms'
     AND COLUMN_NAME = 'router_id'
 );
-SET @sql = IF(@col_exists = 1,
+SET @table_exists = (
+  SELECT COUNT(*)
+  FROM INFORMATION_SCHEMA.TABLES
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'rooms'
+);
+SET @sql = IF(@table_exists = 1 AND @col_exists = 1,
   'ALTER TABLE rooms DROP COLUMN router_id',
   'SELECT 1'
 );

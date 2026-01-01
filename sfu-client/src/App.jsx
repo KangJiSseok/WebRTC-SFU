@@ -1,6 +1,7 @@
 import { Link, NavLink, Route, Routes } from 'react-router-dom'
 import Broadcaster from './components/Broadcaster'
 import Viewer from './components/Viewer'
+import AuthPanel from './components/AuthPanel'
 import './App.css'
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
           <NavLink to="/viewer">Viewer</NavLink>
         </div>
       </header>
+      <AuthPanel />
       <main>
         <Routes>
           <Route path="/" element={<Home />} />

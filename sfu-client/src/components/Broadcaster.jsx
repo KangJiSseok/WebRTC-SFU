@@ -2,12 +2,60 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import * as mediasoupClient from 'mediasoup-client'
 
 const RAW_WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001'
-const WS_TOKEN = import.meta.env.VITE_WS_TOKEN
-const WS_URL = WS_TOKEN ? appendToken(RAW_WS_URL, WS_TOKEN) : RAW_WS_URL
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
 function appendToken(url, token) {
+  if (!token) return url
   const separator = url.includes('?') ? '&' : '?'
   return `${url}${separator}token=${encodeURIComponent(token)}`
+}
+
+function buildWsUrl(token) {
+  return appendToken(RAW_WS_URL, token)
+}
+
+async function fetchSfuToken(roomId, role) {
+  const response = await fetch(
+    `${API_BASE}/api/rooms/${roomId}/sfu-token?role=${encodeURIComponent(role)}`,
+    {
+      method: 'POST',
+      credentials: 'include'
+    }
+  )
+  if (!response.ok) {
+    throw new Error('Failed to issue SFU token. Please login.')
+  }
+  const data = await response.json()
+  return data.token
+}
+
+function getMemberId() {
+  const raw = localStorage.getItem('sfu_member')
+  if (!raw) return ''
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed.id ? String(parsed.id) : ''
+  } catch (err) {
+    return ''
+  }
+}
+
+function addRoomToList(roomId) {
+  if (!roomId) return
+  const list = loadRooms()
+  if (!list.includes(roomId)) {
+    list.unshift(roomId)
+    localStorage.setItem('sfu_rooms', JSON.stringify(list.slice(0, 20)))
+  }
+}
+
+function loadRooms() {
+  try {
+    const stored = localStorage.getItem('sfu_rooms')
+    return stored ? JSON.parse(stored) : []
+  } catch (err) {
+    return []
+  }
 }
 
 function createInitialState() {
@@ -15,6 +63,7 @@ function createInitialState() {
     ws: null,
     roomId: '',
     userId: '',
+    sfuToken: '',
     device: null,
     sendTransport: null,
     localStream: null,
@@ -25,7 +74,6 @@ function createInitialState() {
 
 function Broadcaster() {
   const [roomId, setRoomId] = useState('')
-  const [userId, setUserId] = useState('')
   const [status, setStatus] = useState('')
   const [isError, setIsError] = useState(false)
   const [canCreate, setCanCreate] = useState(true)
@@ -246,7 +294,7 @@ function Broadcaster() {
       return Promise.resolve(stateRef.current.ws)
     }
     return new Promise((resolve, reject) => {
-      const ws = new WebSocket(WS_URL)
+      const ws = new WebSocket(buildWsUrl(stateRef.current.sfuToken))
       stateRef.current.ws = ws
       ws.addEventListener('open', () => {
         updateStatus('Connected to signaling server')
@@ -298,17 +346,18 @@ function Broadcaster() {
   const connectAndCreateRoom = useCallback(async () => {
     try {
       const trimmedRoom = roomId.trim()
-      const trimmedUser = userId.trim()
-      if (!trimmedRoom || !trimmedUser) {
-        updateStatus('Room ID and Broadcaster ID are required', true)
+      const memberId = getMemberId()
+      if (!trimmedRoom || !memberId) {
+        updateStatus('Room ID and login session are required', true)
         return
       }
       stateRef.current.roomId = trimmedRoom
-      stateRef.current.userId = trimmedUser
+      stateRef.current.userId = memberId
+      stateRef.current.sfuToken = await fetchSfuToken(trimmedRoom, 'BROADCASTER')
       await ensureWebSocket()
       send('createRoom', {
         roomId: trimmedRoom,
-        hostId: trimmedUser,
+        hostId: memberId,
         name: trimmedRoom
       })
       updateStatus('Creating room...')
@@ -316,7 +365,7 @@ function Broadcaster() {
       console.error(err)
       updateStatus(`Failed to create room: ${err.message}`, true)
     }
-  }, [ensureWebSocket, roomId, send, updateStatus, userId])
+  }, [ensureWebSocket, roomId, send, updateStatus])
 
   const leaveRoom = useCallback(() => {
     if (
@@ -367,13 +416,8 @@ function Broadcaster() {
             />
           </label>
           <label>
-            Broadcaster ID
-            <input
-              value={userId}
-              onChange={(event) => setUserId(event.target.value)}
-              placeholder="host-1"
-              autoComplete="off"
-            />
+            Broadcaster ID (session)
+            <input value={getMemberId() || ''} readOnly />
           </label>
         </div>
         <div className="button-row">

@@ -23,7 +23,17 @@ function verifyToken(token) {
   if (audience) {
     options.audience = audience;
   }
-  return jwt.verify(token, publicKey, options);
+  const claims = jwt.verify(token, publicKey, options);
+  if (claims.type !== 'SFU') {
+    throw new Error('Invalid token type');
+  }
+  if (!claims.sub) {
+    throw new Error('Missing subject');
+  }
+  if (!claims.role) {
+    throw new Error('Missing role');
+  }
+  return claims;
 }
 
 function getPublicKey() {
@@ -35,7 +45,7 @@ function getPublicKey() {
     cachedKey = normalizeKey(inlineKey);
     return cachedKey;
   }
-  const keyPath = process.env.JWT_PUBLIC_KEY_PATH;
+  const keyPath = process.env.JWT_PUBLIC_KEY_PATH || './keys/public.pem';
   if (!keyPath) {
     throw new Error('JWT_PUBLIC_KEY or JWT_PUBLIC_KEY_PATH is required');
   }
